@@ -1,0 +1,2 @@
+@echo off
+git push -u https://MujtabaRaza1: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@github.com/MujtabaRaza1/Smart-Traffic-Congestion-Control-System-Optimization.git master 
