@@ -1,0 +1,249 @@
+# Smart Traffic Congestion Control System
+## Documentation
+
+### Overview
+The Smart Traffic Congestion Control System is a comprehensive Python-based solution that combines machine learning predictions with knowledge-based optimization to analyze and improve traffic flow in urban environments.
+
+### Project Structure
+```
+smart_traffic/
+├── data/
+│   ├── __init__.py
+│   ├── synthetic_data_generator.py
+│   └── synthetic_traffic_data.csv
+├── preprocessing/
+│   ├── __init__.py
+│   └── data_processor.py
+├── models/
+│   ├── __init__.py
+│   ├── congestion_predictor.py
+│   ├── outputs/
+│   └── saved_models/
+├── optimization/
+│   ├── __init__.py
+│   ├── traffic_optimizer.py
+│   ├── outputs/
+│   └── saved_graphs/
+├── visualization/
+│   ├── __init__.py
+│   ├── dashboard.py
+│   └── outputs/
+├── utils/
+│   └── __init__.py
+├── __init__.py
+├── main.py
+└── run_dashboard.py
+```
+
+### Core Components
+
+#### 1. Data Generation
+The `data/synthetic_data_generator.py` module creates realistic synthetic traffic data.
+
+**Features:**
+- Temporal patterns (day/night, weekday/weekend, rush hour effects)
+- Multiple road types (residential, arterial, highway)
+- Traffic volume and speed data
+- Congestion metrics calculation
+- Weather effects and incident simulation
+- Road network connectivity
+
+**Generated Files:**
+- `synthetic_traffic_data.csv`: Time-series traffic data
+- `road_network_data.csv`: Road network connectivity information
+
+#### 2. Data Preprocessing
+The `preprocessing/data_processor.py` module transforms raw traffic data into machine learning-ready datasets.
+
+**Key Functionality:**
+- Feature engineering:
+  - Temporal features (hour, day, month, cyclic encoding)
+  - Statistical aggregations
+- Data normalization:
+  - Standard scaling for numerical features
+  - One-hot encoding for categorical features
+- Handling missing values
+- Train/test data splitting (time-based or random)
+
+#### 3. Prediction Models
+The `models/congestion_predictor.py` module implements machine learning models to predict traffic congestion.
+
+**Supported Models:**
+- Random Forest Regressor (default for congestion prediction)
+- Gradient Boosting Regressor (optional for speed prediction)
+- Linear Regression (optional baseline)
+
+**Capabilities:**
+- Model training with hyperparameters
+- Performance evaluation (RMSE, MAE, R²)
+- Feature importance analysis and visualization
+- Model persistence (save/load)
+
+#### 4. Knowledge Representation & Optimization
+The `optimization/traffic_optimizer.py` module represents traffic knowledge and generates optimization recommendations.
+
+**Key Components:**
+- `TrafficKnowledgeGraph` class:
+  - Directed graph representation of road network
+  - Traffic data integration
+  - Rule-based recommendation system
+  - Alternative route finding
+
+**Recommendation Types:**
+- Rerouting traffic to less congested routes
+- Traffic signal timing adjustments
+- Capacity increases
+- Incident management
+- Speed limit adjustments based on conditions
+
+#### 5. Visualization
+The `visualization/dashboard.py` module provides an interactive web-based dashboard.
+
+**Dashboard Features:**
+- Traffic overview by road type
+- Interactive network visualization with congestion levels
+- Time-based data filtering
+- Optimization recommendation display
+- Visual highlighting of problem areas
+
+### How to Use
+
+#### Setup and Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd smart-traffic
+   ```
+
+2. **Set up a virtual environment:**
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate  # Windows
+   source venv/bin/activate  # Linux/Mac
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+#### Basic Usage
+
+1. **Generate synthetic data:**
+   ```bash
+   python main.py --generate-data
+   ```
+   
+   Optional parameters:
+   - `--days <number>`: Number of days to simulate (default: 30)
+   - `--roads <number>`: Number of roads to simulate (default: 20)
+
+2. **Run the complete pipeline:**
+   ```bash
+   python main.py
+   ```
+   
+   This will:
+   - Load/generate data
+   - Preprocess the data
+   - Train prediction models
+   - Build knowledge graph
+   - Generate optimization recommendations
+
+3. **Launch the interactive dashboard:**
+   ```bash
+   python run_dashboard.py
+   ```
+   
+   Optional parameters:
+   - `--port <number>`: Port to run the dashboard on (default: 8050)
+   - `--debug`: Enable debug mode
+   - `--generate-data`: Regenerate data before launching
+
+#### Advanced Usage
+
+1. **Train specific models:**
+   ```bash
+   python models/congestion_predictor.py
+   ```
+
+2. **Generate optimization without retraining:**
+   ```bash
+   python main.py --skip-training
+   ```
+
+3. **Explore the knowledge graph:**
+   ```bash
+   python optimization/traffic_optimizer.py
+   ```
+
+### Example Workflow
+
+1. **Generate initial data:**
+   ```bash
+   python main.py --generate-data --days 60 --roads 30
+   ```
+
+2. **Run full pipeline with model training:**
+   ```bash
+   python main.py
+   ```
+
+3. **Launch dashboard to explore results:**
+   ```bash
+   python run_dashboard.py
+   ```
+
+4. **Using the dashboard:**
+   - Click "Load Data" to load the traffic data
+   - Use the timestamp dropdown to select specific time periods
+   - Click "Generate Recommendations" to see optimization suggestions
+   - Explore the network graph by hovering over nodes for details
+
+### Extending the System
+
+#### Adding New Data Sources
+To integrate real-world traffic data:
+1. Create a new module in the `data/` directory
+2. Implement a parser for your data format
+3. Ensure your data includes the required fields (timestamp, road_id, volume, speed, etc.)
+4. Modify `main.py` to use your new data source
+
+#### Implementing New Models
+To add a new prediction model:
+1. Extend the `CongestionPredictor` class with your new model type
+2. Add your model creation logic in the `_create_model` method
+3. Ensure compatibility with the existing training and evaluation pipeline
+
+#### Customizing Optimization Rules
+To modify optimization strategies:
+1. Edit the `DEFAULT_RULES` list in `traffic_optimizer.py`
+2. Each rule should include:
+   - `name`: Descriptive name
+   - `condition`: Lambda function defining when the rule applies
+   - `action`: Recommended action
+   - `priority`: Numerical priority (higher values take precedence)
+
+### Troubleshooting
+
+**Common Issues:**
+- **Missing dependencies:** Ensure all required packages are installed
+- **Graph visualization errors:** Verify NetworkX and Matplotlib are properly installed
+- **Dashboard not launching:** Check that Dash and its dependencies are installed
+- **Path errors:** Ensure you're running commands from the project root directory
+
+**Data Generation Issues:**
+- If synthetic data seems unrealistic, adjust parameters in `generate_traffic_data()`
+- For more complex road networks, modify `add_spatial_relationships()`
+
+**Model Performance Issues:**
+- Try increasing the number of estimators in Random Forest or Gradient Boosting
+- Adjust hyperparameters in the `_create_model` method
+- Add more feature engineering in the `TrafficDataProcessor` class
+
+### Performance Considerations
+
+- Data size affects training time - start with smaller datasets when testing
+- For large networks, visualization may be slow - consider filtering to relevant subgraphs
+- Dashboard performance depends on the size of loaded data
