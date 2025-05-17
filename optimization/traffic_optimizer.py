@@ -388,29 +388,42 @@ class TrafficKnowledgeGraph:
         print(f"Knowledge graph loaded from {filepath}")
         return kg
 
+# Defined functions for rule conditions
+def condition_high_congestion(road, attrs):
+    return attrs.get('congestion', 0) >= 0.8
+
+def condition_incident(road, attrs):
+    return attrs.get('incident', 0) == 1
+
+def condition_medium_congestion(road, attrs):
+    return 0.6 <= attrs.get('congestion', 0) < 0.8
+
+def condition_precipitation(road, attrs):
+    return attrs.get('precipitation', 0) > 1.0
+
 # Example traffic rules
 DEFAULT_RULES = [
     {
         'name': 'high_congestion_rule',
-        'condition': lambda road, attrs: attrs.get('congestion', 0) >= 0.8,
+        'condition': condition_high_congestion,
         'action': 'reroute',
         'priority': 3
     },
     {
         'name': 'incident_rule',
-        'condition': lambda road, attrs: attrs.get('incident', 0) == 1,
+        'condition': condition_incident,
         'action': 'manage_incident',
         'priority': 4
     },
     {
         'name': 'medium_congestion_rule',
-        'condition': lambda road, attrs: 0.6 <= attrs.get('congestion', 0) < 0.8,
+        'condition': condition_medium_congestion,
         'action': 'adjust_signals',
         'priority': 2
     },
     {
         'name': 'precipitation_rule',
-        'condition': lambda road, attrs: attrs.get('precipitation', 0) > 1.0,
+        'condition': condition_precipitation,
         'action': 'reduce_speed_limit',
         'priority': 1
     }

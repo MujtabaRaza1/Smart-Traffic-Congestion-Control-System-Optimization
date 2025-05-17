@@ -340,10 +340,10 @@ def main():
         
         # Save the adapted datasets
         data_dir = Path(__file__).parent
-        adapted_df.to_csv(data_dir / "synthetic_traffic_data.csv", index=False)
+        adapted_df.to_csv(data_dir / "enhanced_synthetic_traffic_data.csv", index=False)
         network_df.to_csv(data_dir / "road_network_data.csv", index=False)
         
-        print("Kaggle data saved successfully as synthetic_traffic_data.csv")
+        print("Kaggle data saved successfully as enhanced_synthetic_traffic_data.csv")
         print("Network data saved successfully as road_network_data.csv")
         
     except Exception as e:
@@ -358,10 +358,10 @@ def main():
         
         # Save the datasets
         data_dir = Path(__file__).parent
-        realistic_df.to_csv(data_dir / "synthetic_traffic_data.csv", index=False)
+        realistic_df.to_csv(data_dir / "enhanced_synthetic_traffic_data.csv", index=False)
         network_df.to_csv(data_dir / "road_network_data.csv", index=False)
         
-        print("Realistic traffic data saved successfully as synthetic_traffic_data.csv")
+        print("Realistic traffic data saved successfully as enhanced_synthetic_traffic_data.csv")
         print("Network data saved successfully as road_network_data.csv")
 
 def generate_realistic_traffic_data():

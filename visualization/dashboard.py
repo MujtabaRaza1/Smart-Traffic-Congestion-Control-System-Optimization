@@ -52,6 +52,16 @@ app.layout = html.Div([
         html.Hr(),
         html.P("Dashboard for traffic monitoring and optimization", className="lead"),
         html.Hr(),
+        dcc.RadioItems(
+            id='dataset-selector-radio',
+            options=[
+                {'label': 'Enhanced Synthetic Data', 'value': 'enhanced'},
+                {'label': 'Original Synthetic Data', 'value': 'original'},
+            ],
+            value='enhanced', # Default value
+            labelStyle={'display': 'block'}
+        ),
+        html.Hr(),
         dcc.Dropdown(
             id='timestamp-dropdown',
             placeholder="Select Timestamp",
@@ -73,7 +83,8 @@ app.layout = html.Div([
         html.H1("Smart Traffic Congestion Control System", style={"text-align": "center"}),
         
         # Store for data
-        dcc.Store(id='traffic-data-store'),
+        dcc.Store(id='enhanced-traffic-data-store'),
+        dcc.Store(id='original-traffic-data-store'),
         dcc.Store(id='network-data-store'),
         dcc.Store(id='recommendation-store'),
         
@@ -166,7 +177,8 @@ app.layout = html.Div([
 ])
 
 @app.callback(
-    [Output('traffic-data-store', 'data'),
+    [Output('enhanced-traffic-data-store', 'data'),
+     Output('original-traffic-data-store', 'data'),
      Output('network-data-store', 'data'),
      Output('timestamp-dropdown', 'options'),
      Output('data-load-status', 'children'),
@@ -177,49 +189,108 @@ app.layout = html.Div([
 def load_data(n_clicks):
     """Load traffic and network data."""
     if n_clicks <= 0:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
     
     # Data paths
     data_dir = Path(__file__).parent.parent / "data"
-    traffic_file = data_dir / "synthetic_traffic_data.csv"
+    original_traffic_file = data_dir / "synthetic_traffic_data.csv"
+    enhanced_traffic_file = data_dir / "enhanced_synthetic_traffic_data.csv"
     network_file = data_dir / "road_network_data.csv"
     
-    if not traffic_file.exists() or not network_file.exists():
-        return dash.no_update, dash.no_update, dash.no_update, "Error: Data files not found.", True
+    original_data_dict = None
+    enhanced_data_dict = None
+    network_data_dict = None
+    all_timestamps = set()
+    status_messages = []
+    disable_recommendations = True
+
+    if network_file.exists():
+        try:
+            network_df = pd.read_csv(network_file)
+            network_data_dict = network_df.to_dict('records')
+            status_messages.append(f"Loaded {network_file.name}.")
+        except Exception as e:
+            status_messages.append(f"Error loading {network_file.name}: {e}")
+            # If network data fails to load, we probably can't do much.
+            return None, None, None, [], ", ".join(status_messages), True
+    else:
+        status_messages.append(f"Error: {network_file.name} not found.")
+        return None, None, None, [], ", ".join(status_messages), True
+
+    # Try loading enhanced data
+    if enhanced_traffic_file.exists():
+        try:
+            df_enhanced = pd.read_csv(enhanced_traffic_file)
+            df_enhanced['timestamp'] = pd.to_datetime(df_enhanced['timestamp'])
+            all_timestamps.update(df_enhanced['timestamp'].unique())
+            df_enhanced['timestamp'] = df_enhanced['timestamp'].astype(str) # For storage
+            enhanced_data_dict = df_enhanced.to_dict('records')
+            status_messages.append(f"Loaded {enhanced_traffic_file.name}.")
+            disable_recommendations = False # Enable if at least one dataset loads
+        except Exception as e:
+            status_messages.append(f"Error loading {enhanced_traffic_file.name}: {e}")
+    else:
+        status_messages.append(f"{enhanced_traffic_file.name} not found.")
     
-    # Load data
-    traffic_data = pd.read_csv(traffic_file)
-    network_data = pd.read_csv(network_file)
+    # Try loading original data
+    if original_traffic_file.exists():
+        try:
+            df_original = pd.read_csv(original_traffic_file)
+            df_original['timestamp'] = pd.to_datetime(df_original['timestamp'])
+            all_timestamps.update(df_original['timestamp'].unique())
+            df_original['timestamp'] = df_original['timestamp'].astype(str) # For storage
+            original_data_dict = df_original.to_dict('records')
+            status_messages.append(f"Loaded {original_traffic_file.name}.")
+            disable_recommendations = False # Enable if at least one dataset loads
+        except Exception as e:
+            status_messages.append(f"Error loading {original_traffic_file.name}: {e}")
+    else:
+        status_messages.append(f"{original_traffic_file.name} not found.")
+
+    if not all_timestamps:
+        status_messages.append("No timestamps found in any dataset.")
+        timestamp_options = []
+        disable_recommendations = True # No data, so disable
+    else:
+        sorted_timestamps = sorted(list(all_timestamps))
+        # Ensure consistent string format for value, compatible with pd.to_datetime
+        timestamp_options = [{'label': str(pd.Timestamp(ts)), 'value': str(pd.Timestamp(ts))} for ts in sorted_timestamps] 
+        status_messages.append("Timestamps updated.")
+
+    final_status = ", ".join(status_messages)
+    if not original_data_dict and not enhanced_data_dict:
+        final_status += " Critical: No traffic data loaded."
+        disable_recommendations = True
     
-    # Convert timestamp to datetime
-    traffic_data['timestamp'] = pd.to_datetime(traffic_data['timestamp'])
-    
-    # Get unique timestamps
-    timestamps = traffic_data['timestamp'].unique()
-    timestamp_options = [{'label': str(ts), 'value': str(ts)} for ts in timestamps]
-    
-    # For storage, convert timestamps to string
-    traffic_data['timestamp'] = traffic_data['timestamp'].astype(str)
-    
-    return traffic_data.to_dict('records'), network_data.to_dict('records'), timestamp_options, "Data loaded successfully.", False
+    return enhanced_data_dict, original_data_dict, network_data_dict, timestamp_options, final_status, disable_recommendations
 
 @app.callback(
     Output('traffic-overview-graph', 'figure'),
-    [Input('traffic-data-store', 'data'),
+    [Input('enhanced-traffic-data-store', 'data'),
+     Input('original-traffic-data-store', 'data'),
+     Input('dataset-selector-radio', 'value'),
      Input('timestamp-dropdown', 'value')],
     prevent_initial_call=True
 )
-def update_traffic_overview(traffic_data, selected_timestamp):
+def update_traffic_overview(enhanced_traffic_data, original_traffic_data, selected_dataset, selected_timestamp):
     """Update traffic overview graph."""
-    if not traffic_data:
-        return go.Figure().update_layout(title="No data available")
+    traffic_data_to_use = None
+    if selected_dataset == 'enhanced':
+        traffic_data_to_use = enhanced_traffic_data
+    elif selected_dataset == 'original':
+        traffic_data_to_use = original_traffic_data
+
+    if not traffic_data_to_use:
+        return go.Figure().update_layout(title="No data available for selected dataset")
     
     # Convert to DataFrame
-    df = pd.DataFrame(traffic_data)
+    df = pd.DataFrame(traffic_data_to_use)
     
     # Filter by timestamp if selected
     if selected_timestamp:
-        df = df[df['timestamp'] == selected_timestamp]
+        # Ensure selected_timestamp is comparable with df['timestamp']
+        # Timestamps in store are strings, selected_timestamp from dropdown is also string
+        df = df[df['timestamp'] == str(pd.Timestamp(selected_timestamp))] 
     
     # Calculate average congestion by road type
     road_type_congestion = df.groupby('road_type')['congestion'].mean().reset_index()
@@ -240,22 +311,30 @@ def update_traffic_overview(traffic_data, selected_timestamp):
 @app.callback(
     Output('network-graph', 'figure'),
     [Input('network-data-store', 'data'),
-     Input('traffic-data-store', 'data'),
+     Input('enhanced-traffic-data-store', 'data'),
+     Input('original-traffic-data-store', 'data'),
+     Input('dataset-selector-radio', 'value'),
      Input('timestamp-dropdown', 'value')],
     prevent_initial_call=True
 )
-def update_network_graph(network_data, traffic_data, selected_timestamp):
+def update_network_graph(network_data, enhanced_traffic_data, original_traffic_data, selected_dataset, selected_timestamp):
     """Update network graph visualization."""
-    if not network_data or not traffic_data:
-        return go.Figure().update_layout(title="No data available")
+    traffic_data_to_use = None
+    if selected_dataset == 'enhanced':
+        traffic_data_to_use = enhanced_traffic_data
+    elif selected_dataset == 'original':
+        traffic_data_to_use = original_traffic_data
+
+    if not network_data or not traffic_data_to_use:
+        return go.Figure().update_layout(title="No data available for selected dataset")
     
     # Convert to DataFrames
     network_df = pd.DataFrame(network_data)
-    traffic_df = pd.DataFrame(traffic_data)
+    traffic_df = pd.DataFrame(traffic_data_to_use)
     
     # Filter by timestamp if selected
     if selected_timestamp:
-        traffic_df = traffic_df[traffic_df['timestamp'] == selected_timestamp]
+        traffic_df = traffic_df[traffic_df['timestamp'] == str(pd.Timestamp(selected_timestamp))]
     
     # Create a directed graph
     G = nx.DiGraph()
@@ -369,23 +448,31 @@ def update_network_graph(network_data, traffic_data, selected_timestamp):
     [Output('recommendation-store', 'data'),
      Output('recommendation-status', 'children')],
     Input('generate-recommendations-button', 'n_clicks'),
-    [State('traffic-data-store', 'data'),
+    [State('enhanced-traffic-data-store', 'data'),
+     State('original-traffic-data-store', 'data'),
+     State('dataset-selector-radio', 'value'),
      State('network-data-store', 'data'),
      State('timestamp-dropdown', 'value')],
     prevent_initial_call=True
 )
-def generate_recommendations(n_clicks, traffic_data, network_data, selected_timestamp):
+def generate_recommendations(n_clicks, enhanced_traffic_data, original_traffic_data, selected_dataset, network_data, selected_timestamp):
     """Generate traffic optimization recommendations."""
-    if n_clicks <= 0 or not traffic_data or not network_data:
+    traffic_data_to_use = None
+    if selected_dataset == 'enhanced':
+        traffic_data_to_use = enhanced_traffic_data
+    elif selected_dataset == 'original':
+        traffic_data_to_use = original_traffic_data
+        
+    if n_clicks <= 0 or not traffic_data_to_use or not network_data:
         return dash.no_update, dash.no_update
     
     try:
         # Convert to DataFrames
-        traffic_df = pd.DataFrame(traffic_data)
+        traffic_df = pd.DataFrame(traffic_data_to_use)
         
         # Filter by timestamp if selected
         if selected_timestamp:
-            traffic_df = traffic_df[traffic_df['timestamp'] == selected_timestamp]
+            traffic_df = traffic_df[traffic_df['timestamp'] == str(pd.Timestamp(selected_timestamp))]
         
         # Find roads with high congestion
         high_congestion_roads = traffic_df[traffic_df['congestion'] > 0.7]
