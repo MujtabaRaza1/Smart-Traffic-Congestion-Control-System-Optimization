@@ -35,6 +35,8 @@ SIDEBAR_STYLE = {
     "width": "16rem",
     "padding": "2rem 1rem",
     "background-color": "#f8f9fa",
+    "box-shadow": "2px 0 5px rgba(0,0,0,0.1)",
+    "z-index": "1000"
 }
 
 # Content style
@@ -48,39 +50,130 @@ CONTENT_STYLE = {
 app.layout = html.Div([
     # Sidebar
     html.Div([
-        html.H2("Traffic Control", className="display-4"),
-        html.Hr(),
-        html.P("Dashboard for traffic monitoring and optimization", className="lead"),
-        html.Hr(),
-        dcc.RadioItems(
-            id='dataset-selector-radio',
-            options=[
-                {'label': 'Enhanced Synthetic Data', 'value': 'enhanced'},
-                {'label': 'Original Synthetic Data', 'value': 'original'},
-            ],
-            value='enhanced', # Default value
-            labelStyle={'display': 'block'}
-        ),
-        html.Hr(),
-        dcc.Dropdown(
-            id='timestamp-dropdown',
-            placeholder="Select Timestamp",
-        ),
-        html.Hr(),
         html.Div([
-            html.Button('Load Data', id='load-data-button', n_clicks=0),
-            html.Div(id='data-load-status')
-        ]),
-        html.Hr(),
+            html.H2("Traffic Control", className="display-4", style={
+                "color": "#2c3e50",
+                "font-size": "1.8rem",
+                "font-weight": "600",
+                "margin-bottom": "1rem",
+                "text-align": "center"
+            }),
+            html.P("Dashboard for traffic monitoring and optimization", style={
+                "color": "#7f8c8d",
+                "font-size": "0.9rem",
+                "text-align": "center",
+                "margin-bottom": "1.5rem"
+            }),
+        ], style={"margin-bottom": "2rem"}),
+        
         html.Div([
-            html.Button('Generate Recommendations', id='generate-recommendations-button', n_clicks=0, disabled=True),
-            html.Div(id='recommendation-status')
-        ]),
+            html.H4("Data Source", style={
+                "color": "#2c3e50",
+                "font-size": "1.1rem",
+                "margin-bottom": "0.5rem"
+            }),
+            dcc.RadioItems(
+                id='dataset-selector-radio',
+                options=[
+                    {'label': 'Enhanced Synthetic Data', 'value': 'enhanced'},
+                    {'label': 'Original Synthetic Data', 'value': 'original'},
+                ],
+                value='enhanced',
+                labelStyle={
+                    'display': 'block',
+                    'padding': '0.5rem 1rem',
+                    'margin': '0.3rem 0',
+                    'border-radius': '4px',
+                    'cursor': 'pointer',
+                    'transition': 'background-color 0.2s'
+                },
+                style={'margin-bottom': '1.5rem'}
+            ),
+        ], style={"margin-bottom": "1.5rem"}),
+        
+        html.Div([
+            html.H4("Time Selection", style={
+                "color": "#2c3e50",
+                "font-size": "1.1rem",
+                "margin-bottom": "0.5rem"
+            }),
+            dcc.Dropdown(
+                id='timestamp-dropdown',
+                placeholder="Select Timestamp",
+                style={
+                    'margin-bottom': '1.5rem',
+                    'border-radius': '4px'
+                }
+            ),
+        ], style={"margin-bottom": "1.5rem"}),
+        
+        html.Div([
+            html.Button(
+                'Load Data',
+                id='load-data-button',
+                n_clicks=0,
+                style={
+                    'width': '100%',
+                    'padding': '0.5rem',
+                    'background-color': '#3498db',
+                    'color': 'white',
+                    'border': 'none',
+                    'border-radius': '4px',
+                    'cursor': 'pointer',
+                    'margin-bottom': '0.5rem',
+                    'transition': 'background-color 0.2s'
+                }
+            ),
+            html.Div(
+                id='data-load-status',
+                style={
+                    'font-size': '0.9rem',
+                    'color': '#7f8c8d',
+                    'margin-top': '0.5rem',
+                    'text-align': 'center'
+                }
+            )
+        ], style={"margin-bottom": "1.5rem"}),
+        
+        html.Div([
+            html.Button(
+                'Generate Recommendations',
+                id='generate-recommendations-button',
+                n_clicks=0,
+                disabled=True,
+                style={
+                    'width': '100%',
+                    'padding': '0.5rem',
+                    'background-color': '#2ecc71',
+                    'color': 'white',
+                    'border': 'none',
+                    'border-radius': '4px',
+                    'cursor': 'pointer',
+                    'margin-bottom': '0.5rem',
+                    'transition': 'background-color 0.2s',
+                    'opacity': '0.7'
+                }
+            ),
+            html.Div(
+                id='recommendation-status',
+                style={
+                    'font-size': '0.9rem',
+                    'color': '#7f8c8d',
+                    'margin-top': '0.5rem',
+                    'text-align': 'center'
+                }
+            )
+        ])
     ], style=SIDEBAR_STYLE),
     
     # Main content
     html.Div([
-        html.H1("Smart Traffic Congestion Control System", style={"text-align": "center"}),
+        html.H1("Smart Traffic Congestion Control System", style={
+            "text-align": "center",
+            "color": "#2c3e50",
+            "margin-bottom": "2rem",
+            "font-weight": "600"
+        }),
         
         # Store for data
         dcc.Store(id='enhanced-traffic-data-store'),
@@ -168,7 +261,20 @@ app.layout = html.Div([
                     # Time series
                     html.Div([
                         html.H3("Traffic Metrics Over Time"),
-                        html.Img(src="/assets/time_series_visualization.png", style={"width": "100%"})
+                        html.Div([
+                            html.Div([
+                                html.H4("Congestion Over Time"),
+                                dcc.Graph(id='congestion-time-series')
+                            ], style={"width": "100%", "margin-bottom": "30px"}),
+                            html.Div([
+                                html.H4("Speed Over Time"),
+                                dcc.Graph(id='speed-time-series')
+                            ], style={"width": "100%", "margin-bottom": "30px"}),
+                            html.Div([
+                                html.H4("Volume Over Time"),
+                                dcc.Graph(id='volume-time-series')
+                            ], style={"width": "100%", "margin-bottom": "30px"})
+                        ])
                     ], style={"margin-bottom": "30px"})
                 ])
             ])
@@ -183,10 +289,11 @@ app.layout = html.Div([
      Output('timestamp-dropdown', 'options'),
      Output('data-load-status', 'children'),
      Output('generate-recommendations-button', 'disabled')],
-    Input('load-data-button', 'n_clicks'),
+    [Input('load-data-button', 'n_clicks'),
+     Input('dataset-selector-radio', 'value')],
     prevent_initial_call=True
 )
-def load_data(n_clicks):
+def load_data(n_clicks, selected_dataset):
     """Load traffic and network data."""
     if n_clicks <= 0:
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
@@ -217,35 +324,35 @@ def load_data(n_clicks):
         status_messages.append(f"Error: {network_file.name} not found.")
         return None, None, None, [], ", ".join(status_messages), True
 
-    # Try loading enhanced data
-    if enhanced_traffic_file.exists():
-        try:
-            df_enhanced = pd.read_csv(enhanced_traffic_file)
-            df_enhanced['timestamp'] = pd.to_datetime(df_enhanced['timestamp'])
-            all_timestamps.update(df_enhanced['timestamp'].unique())
-            df_enhanced['timestamp'] = df_enhanced['timestamp'].astype(str) # For storage
-            enhanced_data_dict = df_enhanced.to_dict('records')
-            status_messages.append(f"Loaded {enhanced_traffic_file.name}.")
-            disable_recommendations = False # Enable if at least one dataset loads
-        except Exception as e:
-            status_messages.append(f"Error loading {enhanced_traffic_file.name}: {e}")
-    else:
-        status_messages.append(f"{enhanced_traffic_file.name} not found.")
-    
-    # Try loading original data
-    if original_traffic_file.exists():
-        try:
-            df_original = pd.read_csv(original_traffic_file)
-            df_original['timestamp'] = pd.to_datetime(df_original['timestamp'])
-            all_timestamps.update(df_original['timestamp'].unique())
-            df_original['timestamp'] = df_original['timestamp'].astype(str) # For storage
-            original_data_dict = df_original.to_dict('records')
-            status_messages.append(f"Loaded {original_traffic_file.name}.")
-            disable_recommendations = False # Enable if at least one dataset loads
-        except Exception as e:
-            status_messages.append(f"Error loading {original_traffic_file.name}: {e}")
-    else:
-        status_messages.append(f"{original_traffic_file.name} not found.")
+    # Load data based on selected dataset type
+    if selected_dataset == 'enhanced':
+        if enhanced_traffic_file.exists():
+            try:
+                df_enhanced = pd.read_csv(enhanced_traffic_file)
+                df_enhanced['timestamp'] = pd.to_datetime(df_enhanced['timestamp'])
+                all_timestamps.update(df_enhanced['timestamp'].unique())
+                df_enhanced['timestamp'] = df_enhanced['timestamp'].astype(str) # For storage
+                enhanced_data_dict = df_enhanced.to_dict('records')
+                status_messages.append(f"Loaded {enhanced_traffic_file.name}.")
+                disable_recommendations = False
+            except Exception as e:
+                status_messages.append(f"Error loading {enhanced_traffic_file.name}: {e}")
+        else:
+            status_messages.append(f"{enhanced_traffic_file.name} not found.")
+    else:  # original dataset
+        if original_traffic_file.exists():
+            try:
+                df_original = pd.read_csv(original_traffic_file)
+                df_original['timestamp'] = pd.to_datetime(df_original['timestamp'])
+                all_timestamps.update(df_original['timestamp'].unique())
+                df_original['timestamp'] = df_original['timestamp'].astype(str) # For storage
+                original_data_dict = df_original.to_dict('records')
+                status_messages.append(f"Loaded {original_traffic_file.name}.")
+                disable_recommendations = False
+            except Exception as e:
+                status_messages.append(f"Error loading {original_traffic_file.name}: {e}")
+        else:
+            status_messages.append(f"{original_traffic_file.name} not found.")
 
     if not all_timestamps:
         status_messages.append("No timestamps found in any dataset.")
@@ -591,6 +698,133 @@ def get_recommendation_details(recommendation):
     }
     
     return actions.get(action, "No additional details")
+
+@app.callback(
+    [Output('congestion-time-series', 'figure'),
+     Output('speed-time-series', 'figure'),
+     Output('volume-time-series', 'figure')],
+    [Input('enhanced-traffic-data-store', 'data'),
+     Input('original-traffic-data-store', 'data'),
+     Input('dataset-selector-radio', 'value')],
+    prevent_initial_call=True
+)
+def update_time_series(enhanced_traffic_data, original_traffic_data, selected_dataset):
+    """Update time series visualizations."""
+    traffic_data_to_use = None
+    if selected_dataset == 'enhanced':
+        traffic_data_to_use = enhanced_traffic_data
+    elif selected_dataset == 'original':
+        traffic_data_to_use = original_traffic_data
+
+    if not traffic_data_to_use:
+        empty_fig = go.Figure().update_layout(title="No data available for selected dataset")
+        return empty_fig, empty_fig, empty_fig
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(traffic_data_to_use)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    
+    # Calculate average metrics over time
+    time_series = df.groupby('timestamp').agg({
+        'congestion': 'mean',
+        'speed': 'mean',
+        'volume': 'mean'
+    }).reset_index()
+    
+    # Create congestion figure
+    congestion_fig = go.Figure()
+    congestion_fig.add_trace(
+        go.Scatter(
+            x=time_series['timestamp'],
+            y=time_series['congestion'],
+            name="Congestion",
+            line=dict(color='red')
+        )
+    )
+    congestion_fig.update_layout(
+        title="Congestion Level Over Time",
+        xaxis_title="Time",
+        yaxis_title="Congestion Level",
+        hovermode="x unified",
+        showlegend=True,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        margin=dict(t=30, l=60, r=30, b=30),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            zeroline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            zeroline=False
+        )
+    )
+    
+    # Create speed figure
+    speed_fig = go.Figure()
+    speed_fig.add_trace(
+        go.Scatter(
+            x=time_series['timestamp'],
+            y=time_series['speed'],
+            name="Speed",
+            line=dict(color='green')
+        )
+    )
+    speed_fig.update_layout(
+        title="Average Speed Over Time",
+        xaxis_title="Time",
+        yaxis_title="Speed (km/h)",
+        hovermode="x unified",
+        showlegend=True,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        margin=dict(t=30, l=60, r=30, b=30),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            zeroline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            zeroline=False
+        )
+    )
+    
+    # Create volume figure
+    volume_fig = go.Figure()
+    volume_fig.add_trace(
+        go.Scatter(
+            x=time_series['timestamp'],
+            y=time_series['volume'],
+            name="Volume",
+            line=dict(color='blue')
+        )
+    )
+    volume_fig.update_layout(
+        title="Traffic Volume Over Time",
+        xaxis_title="Time",
+        yaxis_title="Volume (vehicles)",
+        hovermode="x unified",
+        showlegend=True,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        margin=dict(t=30, l=60, r=30, b=30),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            zeroline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='lightgray',
+            zeroline=False
+        )
+    )
+    
+    return congestion_fig, speed_fig, volume_fig
 
 def run_dashboard(debug=True, port=8050):
     """Run the dashboard."""
