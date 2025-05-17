@@ -15,6 +15,7 @@ from dash import dcc, html, Input, Output, State
 import plotly.express as px
 import plotly.graph_objects as go
 import networkx as nx
+import json
 
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -76,24 +77,91 @@ app.layout = html.Div([
         dcc.Store(id='network-data-store'),
         dcc.Store(id='recommendation-store'),
         
-        # Traffic overview
-        html.Div([
-            html.H2("Traffic Overview"),
-            dcc.Graph(id='traffic-overview-graph')
-        ]),
-        
-        # Network visualization
-        html.Div([
-            html.H2("Road Network"),
-            dcc.Graph(id='network-graph', style={"height": "700px"})
-        ]),
-        
-        # Recommendations
-        html.Div([
-            html.H2("Traffic Optimization Recommendations"),
-            html.Div(id='recommendations-table')
-        ]),
-        
+        # Add tabs for different dashboard sections
+        dcc.Tabs([
+            # Main dashboard tab
+            dcc.Tab(label="Dashboard", children=[
+                # Traffic overview
+                html.Div([
+                    html.H2("Traffic Overview"),
+                    dcc.Graph(id='traffic-overview-graph')
+                ]),
+                
+                # Network visualization
+                html.Div([
+                    html.H2("Road Network"),
+                    dcc.Graph(id='network-graph', style={"height": "700px"})
+                ]),
+                
+                # Recommendations
+                html.Div([
+                    html.H2("Traffic Optimization Recommendations"),
+                    html.Div(id='recommendations-table')
+                ]),
+            ]),
+            
+            # Traffic pattern analysis tab
+            dcc.Tab(label="Traffic Pattern Analysis", children=[
+                html.Div([
+                    html.H2("Traffic Pattern Analysis", style={"text-align": "center"}),
+                    
+                    # Daily patterns
+                    html.Div([
+                        html.H3("Daily Traffic Patterns"),
+                        html.Img(src="/assets/daily_congestion_pattern.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"}),
+                    
+                    # Weekly patterns
+                    html.Div([
+                        html.H3("Weekly Traffic Patterns"),
+                        html.Img(src="/assets/weekly_congestion_pattern.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"}),
+                    
+                    # Rush hour comparison
+                    html.Div([
+                        html.H3("Rush Hour vs. Non-Rush Hour"),
+                        html.Img(src="/assets/rush_hour_comparison.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"}),
+                    
+                    # Congestion heatmap
+                    html.Div([
+                        html.H3("Congestion Heatmap"),
+                        html.Img(src="/assets/congestion_heatmap.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"})
+                ])
+            ]),
+            
+            # Feature analysis tab
+            dcc.Tab(label="Feature Analysis", children=[
+                html.Div([
+                    html.H2("Traffic Feature Analysis", style={"text-align": "center"}),
+                    
+                    # Feature correlation
+                    html.Div([
+                        html.H3("Feature Correlation Matrix"),
+                        html.Img(src="/assets/feature_correlation.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"}),
+                    
+                    # Volume vs congestion
+                    html.Div([
+                        html.H3("Volume vs Congestion Relationship"),
+                        html.Img(src="/assets/volume_congestion_relationship.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"}),
+                    
+                    # Road type comparison
+                    html.Div([
+                        html.H3("Road Type Comparison"),
+                        html.Img(src="/assets/road_type_comparison.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"}),
+                    
+                    # Time series
+                    html.Div([
+                        html.H3("Traffic Metrics Over Time"),
+                        html.Img(src="/assets/time_series_visualization.png", style={"width": "100%"})
+                    ], style={"margin-bottom": "30px"})
+                ])
+            ])
+        ])
     ], style=CONTENT_STYLE)
 ])
 
@@ -311,38 +379,71 @@ def generate_recommendations(n_clicks, traffic_data, network_data, selected_time
     if n_clicks <= 0 or not traffic_data or not network_data:
         return dash.no_update, dash.no_update
     
-    # Convert to DataFrames
-    traffic_df = pd.DataFrame(traffic_data)
-    network_df = pd.DataFrame(network_data)
+    try:
+        # Convert to DataFrames
+        traffic_df = pd.DataFrame(traffic_data)
+        
+        # Filter by timestamp if selected
+        if selected_timestamp:
+            traffic_df = traffic_df[traffic_df['timestamp'] == selected_timestamp]
+        
+        # Find roads with high congestion
+        high_congestion_roads = traffic_df[traffic_df['congestion'] > 0.7]
+        
+        # Create recommendations based on congestion, road type, and other factors
+        recommendations = {}
+        
+        for _, road in high_congestion_roads.iterrows():
+            road_id = str(road['road_id'])
+            congestion = float(road['congestion'])
+            road_type = str(road['road_type'])
+            has_incident = bool(road['incident'])
+            
+            # Determine appropriate action based on conditions
+            if has_incident:
+                action = "manage_incident"
+            elif congestion > 0.9:
+                action = "reroute"
+            elif congestion > 0.8:
+                action = "adjust_signals"
+            elif congestion > 0.7:
+                action = "increase_capacity"
+            
+            # Create a recommendation entry
+            recommendation = {
+                'road_id': road_id,
+                'congestion': congestion,
+                'action': action,
+                'road_type': road_type
+            }
+            
+            # Add to recommendations
+            recommendations[road_id] = recommendation
+        
+        # If no high congestion roads found
+        if not recommendations:
+            # Get top 3 most congested roads as fallback
+            top_congested = traffic_df.sort_values('congestion', ascending=False).head(3)
+            for _, road in top_congested.iterrows():
+                road_id = str(road['road_id'])
+                congestion = float(road['congestion'])
+                road_type = str(road['road_type'])
+                
+                # Create a recommendation entry
+                recommendations[road_id] = {
+                    'road_id': road_id,
+                    'congestion': congestion,
+                    'action': "monitor" if congestion < 0.7 else "adjust_signals",
+                    'road_type': road_type
+                }
+        
+        return recommendations, f"Generated {len(recommendations)} recommendations"
     
-    # Convert timestamp back to datetime
-    traffic_df['timestamp'] = pd.to_datetime(traffic_df['timestamp'])
-    
-    # Filter by timestamp if selected
-    if selected_timestamp:
-        traffic_df = traffic_df[traffic_df['timestamp'] == selected_timestamp]
-    
-    # Create knowledge graph
-    kg = TrafficKnowledgeGraph()
-    
-    # Save network data to temp file
-    temp_network_file = Path(__file__).parent / "temp_network.csv"
-    network_df.to_csv(temp_network_file, index=False)
-    
-    # Load network data
-    kg.load_network_data(str(temp_network_file))
-    
-    # Add traffic data
-    kg.add_traffic_data(traffic_df)
-    
-    # Get recommendations
-    recommendations = kg.optimize_traffic_flow()
-    
-    # Clean up temp file
-    if temp_network_file.exists():
-        temp_network_file.unlink()
-    
-    return recommendations, f"Generated {len(recommendations)} recommendations"
+    except Exception as e:
+        import traceback
+        print(f"Error generating recommendations: {str(e)}")
+        print(traceback.format_exc())
+        return {}, f"Error generating recommendations: {str(e)}"
 
 @app.callback(
     Output('recommendations-table', 'children'),
@@ -352,7 +453,8 @@ def generate_recommendations(n_clicks, traffic_data, network_data, selected_time
 def update_recommendations_table(recommendations):
     """Update recommendations table."""
     if not recommendations:
-        return "No recommendations available."
+        return html.Div("No recommendations available. Try selecting a different timestamp.", 
+                       style={'color': 'red', 'margin': '20px', 'font-weight': 'bold'})
     
     # Create table
     header = html.Tr([
@@ -363,34 +465,45 @@ def update_recommendations_table(recommendations):
     ])
     
     rows = []
-    for road_id, rec in recommendations.items():
-        rows.append(html.Tr([
-            html.Td(road_id),
-            html.Td(rec['action']),
-            html.Td(f"{rec['congestion']:.2f}"),
-            html.Td(get_recommendation_details(rec))
-        ]))
-    
-    table = html.Table([header] + rows, className="table table-striped table-hover")
-    return table
+    try:
+        for road_id, rec in recommendations.items():
+            rows.append(html.Tr([
+                html.Td(road_id),
+                html.Td(rec.get('action', 'Unknown')),
+                html.Td(f"{rec.get('congestion', 0):.2f}"),
+                html.Td(get_recommendation_details(rec))
+            ]))
+        
+        if not rows:
+            return html.Div("No specific recommendations for the selected timestamp. "
+                          "Try selecting a different timestamp with higher congestion levels.",
+                          style={'color': 'blue', 'margin': '20px'})
+        
+        table = html.Table([header] + rows, className="table table-striped table-hover")
+        return table
+    except Exception as e:
+        return html.Div(f"Error displaying recommendations: {str(e)}", 
+                       style={'color': 'red', 'margin': '20px'})
 
 def get_recommendation_details(recommendation):
     """Format recommendation details for display."""
-    if recommendation['action'] == 'reroute' and 'alternatives' in recommendation:
-        alternatives = recommendation['alternatives']
-        if alternatives:
-            alt_info = alternatives[0]  # Just show the first alternative
-            return f"Alternative route: {' → '.join(map(str, alt_info['path']))} (avg congestion: {alt_info['avg_congestion']:.2f})"
+    if not recommendation:
+        return "No details available"
+        
+    action = recommendation.get('action', '')
+    road_type = recommendation.get('road_type', '')
+    congestion = recommendation.get('congestion', 0)
     
     actions = {
-        'reroute': "Reroute traffic to alternative roads",
-        'increase_capacity': "Increase road capacity (add lanes or adjust signals)",
-        'adjust_signals': "Optimize traffic signal timing",
-        'manage_incident': "Clear incident and manage traffic flow",
-        'reduce_speed_limit': "Reduce speed limit due to conditions"
+        'reroute': f"Reroute traffic from this {road_type} road (congestion: {congestion:.2f})",
+        'increase_capacity': f"Increase road capacity on this {road_type} road",
+        'adjust_signals': f"Optimize traffic signal timing for {road_type} road",
+        'manage_incident': f"Clear incident and manage traffic flow on {road_type} road",
+        'reduce_speed_limit': f"Reduce speed limit due to high congestion ({congestion:.2f})",
+        'monitor': f"Monitor traffic conditions on this {road_type} road"
     }
     
-    return actions.get(recommendation['action'], "No additional details")
+    return actions.get(action, "No additional details")
 
 def run_dashboard(debug=True, port=8050):
     """Run the dashboard."""
@@ -399,7 +512,7 @@ def run_dashboard(debug=True, port=8050):
     os.makedirs(output_dir, exist_ok=True)
     
     # Run the app
-    app.run_server(debug=debug, port=port)
+    app.run(debug=debug, port=port)
 
 if __name__ == "__main__":
     run_dashboard() 

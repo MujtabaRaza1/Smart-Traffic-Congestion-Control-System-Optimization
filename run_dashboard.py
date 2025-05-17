@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).parent))
 def main():
     """Main function to run the dashboard."""
     parser = argparse.ArgumentParser(description='Run the Smart Traffic Dashboard')
-    parser.add_argument('--port', type=int, default=8050, help='Port to run the dashboard on')
+    parser.add_argument('--port', type=int, default=8051, help='Port to run the dashboard on')
     parser.add_argument('--debug', action='store_true', help='Run in debug mode')
     parser.add_argument('--generate-data', action='store_true', help='Generate new data before running')
     args = parser.parse_args()
